@@ -211,6 +211,7 @@ body.editing #panel{display:block}
 <details open><summary id="colsum">Colors</summary><div id="cols"></div></details>
 <details><summary>Fonts</summary><div id="fonts"></div></details>
 <details><summary>Tab names</summary><div id="tabs"></div></details>
+<details><summary>Placeholders &amp; chart labels</summary><div id="oth"></div></details>
 <details><summary>Add content</summary>
 <div class="meta">New paper</div><input id="apt" placeholder="Title"><input id="apa" placeholder="Author"><select id="apk"><option>STEM / Empirical</option><option>Humanities / Social Sciences</option><option>Interdisciplinary Review</option></select><button class="btn" id="apadd">Add paper</button>
 <div class="acts"><button class="btn ghost" id="am">Add board member</button><button class="btn ghost" id="ar">Add resource group</button><button class="btn ghost" id="ae">Add event</button></div>
@@ -218,7 +219,7 @@ body.editing #panel{display:block}
 <details><summary>Backup &amp; reset</summary><div class="acts"><button class="btn ghost" id="xp">Export or import</button><button class="btn ghost" id="rst">Discard draft</button></div></details>
 </div></aside>
 <dialog id="xd"><h3>Export or import edits</h3><p class="meta">Copy this text to back up your edits or move them to another device. To import, paste edits here and apply.</p><textarea id="xt" rows="8"></textarea><div class="acts"><button class="btn" id="xc">Copy edits</button><button class="btn ghost" id="xa">Apply pasted edits</button><button class="btn ghost" id="xx">Close</button></div></dialog>
-<script id="pub" type="application/json">{"t":{"0":"test"},"more":null,"papers":[["Microplastic Concentrations in the Normans Kill Watershed Across Four Seasons","Maya R. Chen","STEM / Empirical"],["Rent Control and Housing Supply: A Meta-Analysis of 22 Studies","Jonah Feldman","Humanities / Social Sciences"],["Predicting Raptor Migration Timing with Logistic Models","Priya Nair","STEM / Empirical"],["Reading Frankenstein Through Climate Grief","Elena Voss","Humanities / Social Sciences"],["Sleep, Screens and Attention in Adolescents: A Review","Owen Park","Interdisciplinary Review"]],"cards":[["Sleep, screens and attention",0],["Graph models of friendship networks",0],["Rent control meta-analysis",1],["Raptor migration timing",1],["Wind turbine blade angle",2],["Frankenstein and climate grief",3],["Microplastics in the Normans Kill",4]],"theme":{},"tabs":null}</script>
+<script id="pub" type="application/json">null</script>
 <script>
 let editing=false;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -233,7 +234,7 @@ const papers=[
 function render(f=''){const r=papers.map((p,i)=>[p,i]).filter(([p])=>(p[0]+p[1]).toLowerCase().includes(f.toLowerCase()));
 $('#list').innerHTML=r.length?r.map(([p,i])=>`<div class="paper" tabindex="0" role="link" data-go="article" data-i="${i}">${editing?'<button class="rm" aria-label="Remove paper">×</button>':''}<h3 ${editing?'contenteditable="true" data-pf="0"':''}>${esc(p[0])}</h3><div class="meta"><span ${editing?'contenteditable="true" data-pf="1"':''}>${esc(p[1])}</span> · Grade ${11+(p[1].length%2)}</div><div style="margin-top:6px"><span class="tag">${esc(p[2])}</span></div></div>`).join(''):'<p class="meta">No papers match that search. Try an author name or a broader keyword.</p>'}
 render();
-$('#q').addEventListener('input',e=>{render(e.target.value);$('#lh').textContent=e.target.value?'Search results':'Latest papers'});
+$('#q').addEventListener('input',e=>{render(e.target.value);$('#lh').textContent=e.target.value?'Search results':LHT});
 $('#arch').onclick=()=>{$('#q').value='';render();$('#lh').textContent='Archive: Volumes 1–4';$('#lh').scrollIntoView()};
 // scroll spy
 const links=$$('.toc a'),secs=links.map(a=>$(a.getAttribute('href')));
@@ -274,13 +275,19 @@ const DARK=matchMedia('(prefers-color-scheme: dark)').matches,PRE=DARK?'d_':'',D
 const FONTS={'Newsreader':'Newsreader,Georgia,serif','Public Sans':'"Public Sans",system-ui,sans-serif','Georgia':'Georgia,serif','Times New Roman':'"Times New Roman",serif','Arial':'Arial,Helvetica,sans-serif','System UI':'system-ui,sans-serif','Monospace':'ui-monospace,Menlo,monospace'};
 const SEL='h1,h2,h3,p,li,figcaption,.meta,.issue span,.issue b,.abs,.tag,.eq,.steps div,label,.crit span';
 const els=[...document.querySelectorAll('main :is('+SEL+'), footer')].filter(e=>!e.closest('#more,#list,#kan')&&!e.id);
+const EXTRA='header .brand,.toc a,main .btn:not([id]),#arch,#cite,#sbtn,#lh,h2[id^="s-"]';
+[...document.querySelectorAll(EXTRA)].forEach(e=>{if(!els.includes(e)&&!e.closest('#more,#list,#kan'))els.push(e)});
+let LHT=$('#lh').textContent;
+const OT=[];document.querySelectorAll('main [placeholder]').forEach(e=>OT.push([e,'p']));document.querySelectorAll('main svg text').forEach(e=>OT.push([e,'t']));
+const otGet=([e,k])=>k==='p'?e.placeholder:e.textContent,otSet=([e,k],v)=>{k==='p'?e.placeholder=v:e.textContent=v};
+const OTDEF=OT.map(otGet);
 const orig=els.map(e=>e.innerHTML),origMore=$('#more').innerHTML,DEFTABS=$$('nav button').map(b=>b.textContent);
-let S={t:{},more:null,papers:null,cards:null,theme:{},tabs:null};
+let S={o:{},t:{},more:null,papers:null,cards:null,theme:{},tabs:null};
 const OWNER=(()=>{const q=/[?&]edit(=|&|$)/.test(location.search);try{if(q)localStorage.setItem('ghsrj-owner','1');return localStorage.getItem('ghsrj-owner')==='1'}catch(e){return q}})();
 document.body.classList.toggle('owner',OWNER);
 try{const p=JSON.parse(document.getElementById('pub').textContent);if(p&&typeof p==='object')Object.assign(S,p)}catch(e){}
 if(OWNER)try{const r=localStorage.getItem(KEY);if(r)Object.assign(S,JSON.parse(r))}catch(e){}
-S.theme=S.theme&&typeof S.theme==='object'?S.theme:{};
+S.o=S.o&&typeof S.o==='object'?S.o:{};S.theme=S.theme&&typeof S.theme==='object'?S.theme:{};
 function clean(h){const t=document.createElement('template');t.innerHTML=h;t.content.querySelectorAll('script,iframe,object,embed,link,style,form,meta,base').forEach(n=>n.remove());t.content.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>{if(/^on/i.test(a.name)||/^\s*javascript:/i.test(a.value))n.removeAttribute(a.name)}));return t.innerHTML}
 function collect(){S.t={};els.forEach((e,i)=>{if(e.innerHTML!==orig[i])S.t[i]=e.innerHTML});
 const m=$('#more').cloneNode(true);m.querySelectorAll('.rm').forEach(x=>x.remove());m.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
@@ -302,6 +309,7 @@ if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(p=>[Str
 if(Array.isArray(S.cards))cards.splice(0,cards.length,...S.cards.map(c=>[String(c[0]),Math.max(0,Math.min(4,+c[1]||0))]));
 Object.entries(S.t||{}).forEach(([i,h])=>{if(els[i])els[i].innerHTML=clean(String(h))});
 if(typeof S.more==='string')$('#more').innerHTML=clean(S.more);
+Object.entries(S.o).forEach(([i,v])=>{if(OT[i])otSet(OT[i],String(v))});LHT=$('#lh').textContent;
 applyTheme();applyTabs();render();kan();
 // panel
 $('#colsum').textContent='Colors ('+(DARK?'dark':'light')+' theme)';
@@ -310,11 +318,12 @@ const fo='<option value="">Default</option>'+Object.keys(FONTS).map(f=>`<option>
 $('#fonts').innerHTML=[['fh','Headings'],['fb','Interface'],['fa','Article text']].map(([k,n])=>`<label>${n}<select data-fk="${k}">${fo}</select></label>`).join('');
 $$('[data-fk]').forEach(x=>x.value=S.theme[x.dataset.fk]||'');
 $('#tabs').innerHTML=DEFTABS.map((t,i)=>`<label>Tab ${i+1}<input data-t="${i}" value="${esc((S.tabs&&S.tabs[i])||t)}"></label>`).join('');
+$('#oth').innerHTML=OT.map((x,i)=>`<label>${x[1]==='p'?'Hint':'Chart'}<input data-o="${i}" value="${esc(otGet(x))}"></label>`).join('');
 function prep(){$$('#more .person,#more .box').forEach(x=>{if(!x.querySelector(':scope>.rm'))x.insertAdjacentHTML('afterbegin','<button class="rm" contenteditable="false" aria-label="Remove">×</button>')})}
 function setEdit(on){editing=on;document.body.classList.toggle('editing',on);$('#editBtn').textContent=on?'Done editing':'Edit page';$('#editBtn').setAttribute('aria-pressed',on);
 els.forEach(e=>on?e.setAttribute('contenteditable','true'):e.removeAttribute('contenteditable'));
 const m=$('#more');if(on){m.setAttribute('contenteditable','true');prep()}else{m.removeAttribute('contenteditable');$$('#more .rm').forEach(x=>x.remove())}
-render($('#q').value);kan();if(!on)save()}
+if(on){$('#q').value='';$('#lh').textContent=LHT}render($('#q').value);kan();if(!on)save()}
 $('#editBtn').onclick=()=>setEdit(!editing);
 $('#pmin').onclick=()=>{const m=$('#panel').classList.toggle('min');$('#pmin').textContent=m?'Show':'Hide'};
 document.addEventListener('click',e=>{if(!editing)return;const t=e.target,rm=t.closest('.rm');
@@ -324,9 +333,11 @@ document.addEventListener('input',e=>{const t=e.target;
 if(t.dataset.c){S.theme[PRE+t.dataset.c]=t.value;applyTheme();return save()}
 if(t.dataset.fk){S.theme[t.dataset.fk]=t.value;applyTheme();return save()}
 if(t.dataset.t!==undefined){S.tabs=S.tabs||DEFTABS.slice();const i=+t.dataset.t;S.tabs[i]=t.value||DEFTABS[i];applyTabs();return save()}
-if(!editing)return;const pf=t.closest('[data-pf]');
+if(t.dataset.o!==undefined){const i=+t.dataset.o;otSet(OT[i],t.value);S.o[i]=t.value;return save()}
+if(!editing)return;if(t.id==='lh'||t.closest('#lh'))LHT=$('#lh').textContent;const pf=t.closest('[data-pf]');
 if(pf){papers[+pf.closest('.paper').dataset.i][+pf.dataset.pf]=pf.textContent}
 if(t.closest('main,footer'))later()});
+document.addEventListener('keydown',e=>{if(!editing)return;const b=e.target.closest&&e.target.closest('button[contenteditable],a[contenteditable]');if(b&&(e.key===' '||e.key==='Enter')){e.preventDefault();if(e.key===' ')document.execCommand('insertText',false,' ')}},true);
 document.addEventListener('paste',e=>{if(!editing||!e.target.closest('[contenteditable]'))return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'))});
 $('#apadd').onclick=()=>{const t=$('#apt').value.trim();if(!t){$('#apt').focus();return}
 papers.unshift([t,$('#apa').value.trim()||'Author',$('#apk').value]);cards.push([t,0]);$('#apt').value='';$('#apa').value='';render($('#q').value);kan();save()};
