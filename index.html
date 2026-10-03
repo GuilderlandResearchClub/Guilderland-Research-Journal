@@ -95,7 +95,8 @@ body.editing [contenteditable=true]{outline:1px dashed var(--sky);outline-offset
 body.editing [contenteditable=true]:focus{outline:2px solid var(--sky);background:var(--tint)}
 .rm{display:none;position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:1px solid #B3382C;background:var(--panel);color:#B3382C;cursor:pointer;line-height:1;font-size:16px;padding:0;z-index:2}
 body.editing .rm{display:block}
-.paper,#more .person,#more .box{position:relative}
+.paper,.fcard,#more .person,#more .box{position:relative}
+.fcard h3{margin-top:0}.fcard .btn{margin-top:8px}
 #panel{display:none;position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:310px;max-height:72vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:6px;box-shadow:0 6px 24px rgba(10,20,35,.25);z-index:9;padding:12px 14px}
 body.editing #panel{display:block}
 #panel .ph{display:flex;justify-content:space-between;align-items:center}
@@ -113,7 +114,7 @@ body.editing #panel{display:block}
 <header class="top"><div class="bar">
 <button class="brand" data-go="home">Guilderland High School Research Journal<small>GHSRJ · Peer-reviewed student research</small></button>
 <nav aria-label="Main">
-<button data-go="home" aria-current="true">Journal</button><button data-go="article">Read</button><button data-go="submit">Submit</button><button data-go="editor">Editors</button><button data-go="more">Board &amp; events</button>
+<button data-go="home" aria-current="true">Journal</button><button data-go="read">Read</button><button data-go="submit">Submit</button><button data-go="editor">Editors</button><button data-go="more">Board &amp; events</button>
 </nav><button class="btn" id="editBtn" aria-pressed="false" style="background:#fff;color:#14335C;border-color:#fff">Edit page</button></div></header>
 
 <main>
@@ -157,6 +158,8 @@ body.editing #panel{display:block}
 <pre id="ctext"></pre><div class="acts"><button class="btn" id="copy">Copy citation</button><button class="btn ghost" id="close">Close</button></div></dialog>
 </section>
 
+<section class="view" id="read"></section>
+<section class="view" id="field"></section>
 <!-- SUBMIT -->
 <section class="view" id="submit">
 <h1 style="font-size:32px">Submit your research</h1>
@@ -223,27 +226,44 @@ body.editing #panel{display:block}
 <script>
 let editing=false;const gr=p=>p[3]!==undefined?p[3]:'Grade '+(11+(p[1].length%2));const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-function go(id){$$('.view').forEach(v=>v.classList.toggle('on',v.id===id));$$('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===id));window.scrollTo(0,0)}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
-const papers=[
-['Microplastic Concentrations in the Normans Kill Watershed Across Four Seasons','Maya R. Chen','STEM / Empirical'],
-['Rent Control and Housing Supply: A Meta-Analysis of 22 Studies','Jonah Feldman','Humanities / Social Sciences'],
-['Predicting Raptor Migration Timing with Logistic Models','Priya Nair','STEM / Empirical'],
-['Reading Frankenstein Through Climate Grief','Elena Voss','Humanities / Social Sciences'],
-['Sleep, Screens and Attention in Adolescents: A Review','Owen Park','Interdisciplinary Review']];
-function render(f=''){const r=papers.map((p,i)=>[p,i]).filter(([p])=>(p[0]+p[1]).toLowerCase().includes(f.toLowerCase()));
-$('#list').innerHTML=r.length?r.map(([p,i])=>`<div class="paper" tabindex="0" role="link" data-go="article" data-i="${i}">${editing?'<button class="rm" aria-label="Remove paper">×</button>':''}<h3 ${editing?'contenteditable="true" data-pf="0"':''}>${esc(p[0])}</h3><div class="meta"><span ${editing?'contenteditable="true" data-pf="1"':''}>${esc(p[1])}</span> · <span ${editing?'contenteditable="true" data-pf="3"':''}>${esc(gr(p))}</span></div><div style="margin-top:6px"><span class="tag" ${editing?'contenteditable="true" data-pf="2"':''}>${esc(p[2])}</span></div></div>`).join(''):'<p class="meta">No papers match that search. Try an author name or a broader keyword.</p>'}
+let curF='',curP=0;
+function go(id){if(id==='read')rRead();if(id==='field')rField();if(id==='article')rArt();$$('.view').forEach(v=>v.classList.toggle('on',v.id===id));$$('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===id));window.scrollTo(0,0)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){e.preventDefault();nav(b.dataset.go,b.dataset.fid,b.dataset.i===undefined?undefined:+b.dataset.i)}if(!editing&&e.target.closest('[data-cite]')){sc('apa');$('#dlg').showModal()}});
+const DEFAB='<b>Abstract.</b> Write a short summary of the research question, methods and findings here.',DEFB='<h2>Introduction</h2><p>Write the paper here.</p>';
+const fields=[{id:'f0',n:'Environmental Science',d:'Ecosystems, climate, water and sustainability.'},{id:'f1',n:'Economics & Policy',d:'Markets, housing, public policy and civic life.'},{id:'f2',n:'Biology',d:'Living systems from cells to migrating birds.'},{id:'f3',n:'Literature & History',d:'Texts, ideas and how the past shapes the present.'},{id:'f4',n:'Psychology & Health',d:'Behavior, wellbeing and adolescent development.'},{id:'f5',n:'Computer Science',d:'Algorithms, data and software.'}];
+const mk=(t,a,k,f,g)=>({t,a,k,g:g||'Grade 12',f,ab:null,b:null});
+const papers=[mk('Microplastic Concentrations in the Normans Kill Watershed Across Four Seasons','Maya R. Chen','STEM / Empirical','f0'),mk('Rent Control and Housing Supply: A Meta-Analysis of 22 Studies','Jonah Feldman','Humanities / Social Sciences','f1','Grade 11'),mk('Predicting Raptor Migration Timing with Logistic Models','Priya Nair','STEM / Empirical','f2'),mk('Reading Frankenstein Through Climate Grief','Elena Voss','Humanities / Social Sciences','f3','Grade 11'),mk('Sleep, Screens and Attention in Adolescents: A Review','Owen Park','Interdisciplinary Review','f4')];
+const newP=(t,a,k,f)=>({t,a:a||'Author',k:k||'STEM / Empirical',g:'Grade 12',f:f||'',ab:DEFAB,b:DEFB});
+const norm=(o,i)=>Array.isArray(o)?{t:String(o[0]),a:String(o[1]),k:String(o[2]),g:o[3]!==undefined?String(o[3]):'Grade '+(11+(String(o[1]).length%2)),f:['f0','f1','f2','f3','f4'][i]||'',ab:null,b:null}:{t:String(o.t),a:String(o.a),k:String(o.k),g:String(o.g),f:String(o.f||''),ab:o.ab==null?null:clean(String(o.ab)),b:o.b==null?null:clean(String(o.b))};
+function seed(){const p=papers[0],pr=$('#article .prose'),ab=pr&&pr.querySelector('.abs');if(p&&p.b==null&&ab&&/Microplastic/.test(p.t)){p.ab=ab.innerHTML;let x='',n=ab.nextElementSibling;while(n){x+=n.outerHTML;n=n.nextElementSibling}p.b=x}
+papers.forEach(q=>{if(q.ab==null)q.ab=DEFAB;if(q.b==null)q.b=DEFB})}
+function buildViews(){const a=$('#article .article');if(a)a.outerHTML='<article class="prose" id="av" style="max-width:760px"></article>'}
+const fname=id=>(fields.find(f=>f.id===id)||{n:'No field'}).n;
+const ed=(k,a)=>editing?` contenteditable="true" data-${a}="${k}"`:'';
+const card=(p,i)=>`<div class="paper" tabindex="0" role="link" data-go="article" data-i="${i}">${editing?'<button class="rm" aria-label="Remove paper">×</button>':''}<h3 ${editing?'contenteditable="true" data-pf="0"':''}>${esc(p.t)}</h3><div class="meta"><span ${editing?'contenteditable="true" data-pf="1"':''}>${esc(p.a)}</span> · <span ${editing?'contenteditable="true" data-pf="3"':''}>${esc(p.g)}</span></div><div style="margin-top:6px"><span class="tag" ${editing?'contenteditable="true" data-pf="2"':''}>${esc(p.k)}</span></div>${editing?`<button class="btn" data-act="open" data-v="article|${i}">Open paper ›</button>`:''}</div>`;
+function render(f=''){const r=papers.map((p,i)=>[p,i]).filter(([p])=>(p.t+p.a).toLowerCase().includes(f.toLowerCase()));
+$('#list').innerHTML=(editing?`<button class="btn" data-act="addp" data-v="${fields[0]?fields[0].id:''}">+ Add paper</button>`:'')+(r.length?r.map(([p,i])=>card(p,i)).join(''):'<p class="meta">No papers match that search. Try an author name or a broader keyword.</p>')}
+function rRead(){$('#read').innerHTML=`<h1 style="font-size:32px">Browse by field</h1><p class="meta">Choose a research area to see its papers.</p><div class="three">${fields.map(f=>`<div class="box fcard" data-fid="${f.id}">${editing?'<button class="rm" aria-label="Remove field">×</button>':''}<h3${ed('n','fld')} data-fid="${f.id}">${esc(f.n)}</h3><p${ed('d','fld')} data-fid="${f.id}">${esc(f.d)}</p><p class="meta">${papers.filter(p=>p.f===f.id).length} papers</p>${editing?`<button class="btn" data-act="open" data-v="field|${f.id}">Open field ›</button>`:`<a href="#" data-go="field" data-fid="${f.id}">View papers →</a>`}</div>`).join('')}</div>${editing?'<p><button class="btn" data-act="addf">+ Add field</button></p>':''}`}
+function rField(){const f=fields.find(x=>x.id===curF);if(!f){$('#field').innerHTML='<p><a href="#" data-go="read">← All fields</a></p><p class="meta">That field no longer exists.</p>';return}
+const ps=papers.map((p,i)=>[p,i]).filter(([p])=>p.f===f.id);
+$('#field').innerHTML=`<p><a href="#" data-go="read">← All fields</a></p><h1 style="font-size:32px"${ed('n','fld')} data-fid="${f.id}">${esc(f.n)}</h1><p class="meta"${ed('d','fld')} data-fid="${f.id}">${esc(f.d)}</p>${editing?`<p><button class="btn" data-act="addp" data-v="${f.id}">+ Add paper to this field</button></p>`:''}<div>${ps.length?ps.map(([p,i])=>card(p,i)).join(''):'<p class="meta">No papers in this field yet.</p>'}</div>`}
+function rArt(){const p=papers[curP],av=$('#av');if(!av)return;if(!p){av.innerHTML='<p><a href="#" data-go="read">← All fields</a></p><p class="meta">Paper not found.</p>';return}
+av.innerHTML=`<p><a href="#" data-go="field" data-fid="${p.f}">← ${esc(fname(p.f))}</a> · <a href="#" data-go="read">All fields</a></p>${editing?`<label>Field <select data-pfield>${fields.map(f=>`<option value="${f.id}"${f.id===p.f?' selected':''}>${esc(f.n)}</option>`).join('')}</select></label>`:''}<span class="tag"${ed('k','pap')}>${esc(p.k)}</span><h1 style="font-size:clamp(28px,4vw,40px);margin:10px 0"${ed('t','pap')}>${esc(p.t)}</h1><div class="meta" style="font-family:'Public Sans'"><span${ed('a','pap')}>${esc(p.a)}</span> · <span${ed('g','pap')}>${esc(p.g)}</span></div><div class="acts"><button class="btn" data-cite>Cite</button></div><div class="abs"${ed('ab','pap')}>${p.ab}</div><div${ed('b','pap')}>${p.b}</div>`}
+function refresh(){render($('#q').value);const v=($('.view.on')||{}).id;if(v==='read')rRead();if(v==='field')rField();if(v==='article')rArt()}
+function nav(id,fid,i){if(fid!==undefined)curF=fid;if(i!==undefined)curP=i;go(id)}
+function doAct(a,v){if(a==='open'){const[k,x]=v.split('|');nav(k,k==='field'?x:undefined,k==='article'?+x:undefined)}
+else if(a==='addp'){papers.unshift(newP('New paper','Author','STEM / Empirical',v));cards.push(['New paper',0]);refresh();kan();save()}
+else if(a==='addf'){fields.push({id:'f'+Date.now(),n:'New field',d:'Describe this field.'});rRead();save()}}
+function delField(id){if(!confirm('Remove this field and all of its papers?'))return;const i=fields.findIndex(f=>f.id===id);if(i>=0)fields.splice(i,1);for(let j=papers.length-1;j>=0;j--)if(papers[j].f===id)papers.splice(j,1);refresh();save()}
+const citeOf=p=>({apa:`${p.a}. (2026). ${p.t}. Guilderland High School Research Journal.`,mla:`${p.a}. "${p.t}." Guilderland High School Research Journal, 2026.`,bib:`@article{ghsrj2026,\n  author  = {${p.a}},\n  title   = {${p.t}},\n  journal = {Guilderland High School Research Journal},\n  year    = {2026}\n}`});
 render();
 $('#q').addEventListener('input',e=>{render(e.target.value);$('#lh').textContent=e.target.value?'Search results':LHT});
 $('#arch').onclick=()=>{$('#q').value='';render();$('#lh').textContent='Archive: Volumes 1–4';$('#lh').scrollIntoView()};
-// scroll spy
-const links=$$('.toc a'),secs=links.map(a=>$(a.getAttribute('href')));
-addEventListener('scroll',()=>{let c=0;secs.forEach((s,i)=>{if(s.getBoundingClientRect().top<140)c=i});links.forEach((a,i)=>a.classList.toggle('act',i===c))});
 // cite
 const cites={apa:'Chen, M. R. (2026). Microplastic concentrations in the Normans Kill watershed across four seasons. Guilderland High School Research Journal, 4(2). https://doi.org/10.55555/ghsrj.2026.0412',
 mla:'Chen, Maya R. "Microplastic Concentrations in the Normans Kill Watershed Across Four Seasons." Guilderland High School Research Journal, vol. 4, no. 2, 2026, doi:10.55555/ghsrj.2026.0412.',
 bib:'@article{chen2026microplastic,\n  author  = {Chen, Maya R.},\n  title   = {Microplastic Concentrations in the Normans Kill Watershed Across Four Seasons},\n  journal = {Guilderland High School Research Journal},\n  volume  = {4}, number = {2}, year = {2026},\n  doi     = {10.55555/ghsrj.2026.0412}\n}'};
-let cf='apa';const sc=f=>{cf=f;$('#ctext').textContent=cites[f];$$('[data-f]').forEach(b=>b.classList.toggle('ghost',b.dataset.f!==f))};
+let cf='apa';const sc=f=>{cf=f;$('#ctext').textContent=citeOf(papers[curP]||{a:'',t:''})[f];$$('[data-f]').forEach(b=>b.classList.toggle('ghost',b.dataset.f!==f))};
 $('#cite').onclick=()=>{sc('apa');$('#dlg').showModal()};$('#close').onclick=()=>$('#dlg').close();
 $$('[data-f]').forEach(b=>b.onclick=()=>sc(b.dataset.f));
 $('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(cites[cf]);$('#copy').textContent='Copied'}catch(e){$('#copy').textContent='Select text to copy'}setTimeout(()=>$('#copy').textContent='Copy citation',1600)};
@@ -291,7 +311,7 @@ S.o=S.o&&typeof S.o==='object'?S.o:{};S.theme=S.theme&&typeof S.theme==='object'
 function clean(h){const t=document.createElement('template');t.innerHTML=h;t.content.querySelectorAll('script,iframe,object,embed,link,style,form,meta,base').forEach(n=>n.remove());t.content.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>{if(/^on/i.test(a.name)||/^\s*javascript:/i.test(a.value))n.removeAttribute(a.name)}));return t.innerHTML}
 function collect(){S.t={};els.forEach((e,i)=>{if(e.innerHTML!==orig[i])S.t[i]=e.innerHTML});
 const m=$('#more').cloneNode(true);m.querySelectorAll('.rm').forEach(x=>x.remove());m.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
-S.more=m.innerHTML!==origMore?m.innerHTML:null;S.papers=papers;S.cards=cards}
+S.more=m.innerHTML!==origMore?m.innerHTML:null;S.papers=papers;S.fields=fields;S.cards=cards}
 function save(){if(!OWNER)return;collect();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 let tm;const later=()=>{clearTimeout(tm);tm=setTimeout(save,400)};
 const sty=document.createElement('style');document.head.appendChild(sty);
@@ -305,12 +325,13 @@ if(FONTS[t.fa])c+=`.prose{font-family:${FONTS[t.fa]}!important}`;
 sty.textContent=c}
 function applyTabs(){$$('nav button').forEach((b,i)=>{if(S.tabs&&S.tabs[i])b.textContent=S.tabs[i]})}
 // restore
-if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(p=>p[3]!==undefined?[String(p[0]),String(p[1]),String(p[2]),String(p[3])]:[String(p[0]),String(p[1]),String(p[2])]));
+if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(norm));
+if(Array.isArray(S.fields))fields.splice(0,fields.length,...S.fields.map(f=>({id:String(f.id),n:String(f.n),d:String(f.d)})));
 if(Array.isArray(S.cards))cards.splice(0,cards.length,...S.cards.map(c=>[String(c[0]),Math.max(0,Math.min(4,+c[1]||0))]));
 Object.entries(S.t||{}).forEach(([i,h])=>{if(els[i])els[i].innerHTML=clean(String(h))});
 if(typeof S.more==='string')$('#more').innerHTML=clean(S.more);
 Object.entries(S.o).forEach(([i,v])=>{if(OT[i])otSet(OT[i],String(v))});LHT=$('#lh').textContent;
-applyTheme();applyTabs();render();kan();
+seed();buildViews();applyTheme();applyTabs();render();kan();
 // panel
 $('#colsum').textContent='Colors ('+(DARK?'dark':'light')+' theme)';
 $('#cols').innerHTML=[['navy','Header & headings'],['sky','Accent'],['bg','Page background'],['ink','Text'],['tint','Highlight boxes']].map(([k,n])=>`<label>${n}<input type="color" data-c="${k}" value="${S.theme[PRE+k]||(DARK?DEFD:DEF)[k]}"></label>`).join('');
@@ -323,11 +344,11 @@ function prep(){$$('#more .person,#more .box').forEach(x=>{if(!x.querySelector('
 function setEdit(on){editing=on;document.body.classList.toggle('editing',on);$('#editBtn').textContent=on?'Done editing':'Edit page';$('#editBtn').setAttribute('aria-pressed',on);
 els.forEach(e=>on?e.setAttribute('contenteditable','true'):e.removeAttribute('contenteditable'));
 const m=$('#more');if(on){m.setAttribute('contenteditable','true');prep()}else{m.removeAttribute('contenteditable');$$('#more .rm').forEach(x=>x.remove())}
-if(on){$('#q').value='';$('#lh').textContent=LHT}render($('#q').value);kan();if(!on)save()}
+if(on){$('#q').value='';$('#lh').textContent=LHT}refresh();kan();if(!on)save()}
 $('#editBtn').onclick=()=>setEdit(!editing);
 $('#pmin').onclick=()=>{const m=$('#panel').classList.toggle('min');$('#pmin').textContent=m?'Show':'Hide'};
-document.addEventListener('click',e=>{if(!editing)return;const t=e.target,rm=t.closest('.rm');
-if(rm){e.preventDefault();e.stopImmediatePropagation();const p=rm.closest('.paper');if(p){papers.splice(+p.dataset.i,1);render($('#q').value)}else rm.parentElement.remove();save();return}
+document.addEventListener('click',e=>{if(!editing)return;const t=e.target,rm=t.closest('.rm'),ac=t.closest('[data-act]');if(ac){e.preventDefault();e.stopImmediatePropagation();doAct(ac.dataset.act,ac.dataset.v);return}
+if(rm){e.preventDefault();e.stopImmediatePropagation();const p=rm.closest('.paper');if(p){papers.splice(+p.dataset.i,1);refresh()}else if(rm.closest('.fcard')){delField(rm.closest('.fcard').dataset.fid);return}else rm.parentElement.remove();save();return}
 if(t.closest('main a,main .btn,main [data-go]')){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('input',e=>{const t=e.target;
 if(t.dataset.c){S.theme[PRE+t.dataset.c]=t.value;applyTheme();return save()}
@@ -335,12 +356,15 @@ if(t.dataset.fk){S.theme[t.dataset.fk]=t.value;applyTheme();return save()}
 if(t.dataset.t!==undefined){S.tabs=S.tabs||DEFTABS.slice();const i=+t.dataset.t;S.tabs[i]=t.value||DEFTABS[i];applyTabs();return save()}
 if(t.dataset.o!==undefined){const i=+t.dataset.o;otSet(OT[i],t.value);S.o[i]=t.value;return save()}
 if(!editing)return;if(t.id==='lh'||t.closest('#lh'))LHT=$('#lh').textContent;const pf=t.closest('[data-pf]');
-if(pf){const pp=papers[+pf.closest('.paper').dataset.i];if(+pf.dataset.pf===1&&pp[3]===undefined)pp[3]=gr(pp);pp[+pf.dataset.pf]=pf.textContent}
+if(pf){papers[+pf.closest('.paper').dataset.i][['t','a','k','g'][+pf.dataset.pf]]=pf.textContent}
+const fl=t.closest('[data-fld]');if(fl){const o=fields.find(x=>x.id===fl.dataset.fid);if(o)o[fl.dataset.fld]=fl.textContent}
+const pa=t.closest('[data-pap]');if(pa&&papers[curP]){const k=pa.dataset.pap;papers[curP][k]=(k==='ab'||k==='b')?pa.innerHTML:pa.textContent}
+if(t.dataset.pfield!==undefined&&papers[curP])papers[curP].f=t.value;
 if(t.closest('main,footer'))later()});
 document.addEventListener('keydown',e=>{if(!editing)return;const b=e.target.closest&&e.target.closest('button[contenteditable],a[contenteditable]');if(b&&(e.key===' '||e.key==='Enter')){e.preventDefault();if(e.key===' ')document.execCommand('insertText',false,' ')}},true);
 document.addEventListener('paste',e=>{if(!editing||!e.target.closest('[contenteditable]'))return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'))});
 $('#apadd').onclick=()=>{const t=$('#apt').value.trim();if(!t){$('#apt').focus();return}
-papers.unshift([t,$('#apa').value.trim()||'Author',$('#apk').value]);cards.push([t,0]);$('#apt').value='';$('#apa').value='';render($('#q').value);kan();save()};
+papers.unshift(newP(t,$('#apa').value.trim(),$('#apk').value,fields[0]?fields[0].id:''));cards.push([t,0]);$('#apt').value='';$('#apa').value='';render($('#q').value);kan();save()};
 const addTo=(i,h)=>{$$('#more .three')[i].insertAdjacentHTML('beforeend',h);prep();save();go('more')};
 $('#am').onclick=()=>{const c=$$('#more .three')[0].children;let m=c[0];[...c].forEach(x=>{if(x.querySelectorAll('.person').length<m.querySelectorAll('.person').length)m=x});m.insertAdjacentHTML('beforeend','<div class="person"><div class="av">NN</div><div><b>New member</b><br>Role, grade</div></div>');prep();save();go('more')};
 $('#ar').onclick=()=>addTo(1,'<div class="box"><b>New resource group</b><br><a href="#">New link</a></div>');
