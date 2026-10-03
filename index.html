@@ -221,7 +221,7 @@ body.editing #panel{display:block}
 <dialog id="xd"><h3>Export or import edits</h3><p class="meta">Copy this text to back up your edits or move them to another device. To import, paste edits here and apply.</p><textarea id="xt" rows="8"></textarea><div class="acts"><button class="btn" id="xc">Copy edits</button><button class="btn ghost" id="xa">Apply pasted edits</button><button class="btn ghost" id="xx">Close</button></div></dialog>
 <script id="pub" type="application/json">null</script>
 <script>
-let editing=false;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let editing=false;const gr=p=>p[3]!==undefined?p[3]:'Grade '+(11+(p[1].length%2));const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function go(id){$$('.view').forEach(v=>v.classList.toggle('on',v.id===id));$$('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===id));window.scrollTo(0,0)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
@@ -232,7 +232,7 @@ const papers=[
 ['Reading Frankenstein Through Climate Grief','Elena Voss','Humanities / Social Sciences'],
 ['Sleep, Screens and Attention in Adolescents: A Review','Owen Park','Interdisciplinary Review']];
 function render(f=''){const r=papers.map((p,i)=>[p,i]).filter(([p])=>(p[0]+p[1]).toLowerCase().includes(f.toLowerCase()));
-$('#list').innerHTML=r.length?r.map(([p,i])=>`<div class="paper" tabindex="0" role="link" data-go="article" data-i="${i}">${editing?'<button class="rm" aria-label="Remove paper">×</button>':''}<h3 ${editing?'contenteditable="true" data-pf="0"':''}>${esc(p[0])}</h3><div class="meta"><span ${editing?'contenteditable="true" data-pf="1"':''}>${esc(p[1])}</span> · Grade ${11+(p[1].length%2)}</div><div style="margin-top:6px"><span class="tag">${esc(p[2])}</span></div></div>`).join(''):'<p class="meta">No papers match that search. Try an author name or a broader keyword.</p>'}
+$('#list').innerHTML=r.length?r.map(([p,i])=>`<div class="paper" tabindex="0" role="link" data-go="article" data-i="${i}">${editing?'<button class="rm" aria-label="Remove paper">×</button>':''}<h3 ${editing?'contenteditable="true" data-pf="0"':''}>${esc(p[0])}</h3><div class="meta"><span ${editing?'contenteditable="true" data-pf="1"':''}>${esc(p[1])}</span> · <span ${editing?'contenteditable="true" data-pf="3"':''}>${esc(gr(p))}</span></div><div style="margin-top:6px"><span class="tag" ${editing?'contenteditable="true" data-pf="2"':''}>${esc(p[2])}</span></div></div>`).join(''):'<p class="meta">No papers match that search. Try an author name or a broader keyword.</p>'}
 render();
 $('#q').addEventListener('input',e=>{render(e.target.value);$('#lh').textContent=e.target.value?'Search results':LHT});
 $('#arch').onclick=()=>{$('#q').value='';render();$('#lh').textContent='Archive: Volumes 1–4';$('#lh').scrollIntoView()};
@@ -305,7 +305,7 @@ if(FONTS[t.fa])c+=`.prose{font-family:${FONTS[t.fa]}!important}`;
 sty.textContent=c}
 function applyTabs(){$$('nav button').forEach((b,i)=>{if(S.tabs&&S.tabs[i])b.textContent=S.tabs[i]})}
 // restore
-if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(p=>[String(p[0]),String(p[1]),String(p[2])]));
+if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(p=>p[3]!==undefined?[String(p[0]),String(p[1]),String(p[2]),String(p[3])]:[String(p[0]),String(p[1]),String(p[2])]));
 if(Array.isArray(S.cards))cards.splice(0,cards.length,...S.cards.map(c=>[String(c[0]),Math.max(0,Math.min(4,+c[1]||0))]));
 Object.entries(S.t||{}).forEach(([i,h])=>{if(els[i])els[i].innerHTML=clean(String(h))});
 if(typeof S.more==='string')$('#more').innerHTML=clean(S.more);
@@ -335,7 +335,7 @@ if(t.dataset.fk){S.theme[t.dataset.fk]=t.value;applyTheme();return save()}
 if(t.dataset.t!==undefined){S.tabs=S.tabs||DEFTABS.slice();const i=+t.dataset.t;S.tabs[i]=t.value||DEFTABS[i];applyTabs();return save()}
 if(t.dataset.o!==undefined){const i=+t.dataset.o;otSet(OT[i],t.value);S.o[i]=t.value;return save()}
 if(!editing)return;if(t.id==='lh'||t.closest('#lh'))LHT=$('#lh').textContent;const pf=t.closest('[data-pf]');
-if(pf){papers[+pf.closest('.paper').dataset.i][+pf.dataset.pf]=pf.textContent}
+if(pf){const pp=papers[+pf.closest('.paper').dataset.i];if(+pf.dataset.pf===1&&pp[3]===undefined)pp[3]=gr(pp);pp[+pf.dataset.pf]=pf.textContent}
 if(t.closest('main,footer'))later()});
 document.addEventListener('keydown',e=>{if(!editing)return;const b=e.target.closest&&e.target.closest('button[contenteditable],a[contenteditable]');if(b&&(e.key===' '||e.key==='Enter')){e.preventDefault();if(e.key===' ')document.execCommand('insertText',false,' ')}},true);
 document.addEventListener('paste',e=>{if(!editing||!e.target.closest('[contenteditable]'))return;e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'))});
