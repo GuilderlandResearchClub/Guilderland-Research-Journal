@@ -107,6 +107,11 @@ body:not(.owner) nav [data-go="editor"]{display:none}.rv[hidden]{display:none}#s
 .cd.today .dn{background:var(--sky);color:#fff;border-radius:10px;padding:0 6px}.dn{font-size:12px;align-self:flex-start}
 .ce{font:inherit;font-size:11px;text-align:left;padding:2px 4px;border:0;border-left:3px solid var(--sky);background:var(--tint);color:var(--ink);border-radius:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cadd{position:absolute;top:0;right:2px;font-size:14px;border:0;background:none;cursor:pointer;color:var(--ink)}.ann{border-bottom:1px solid var(--line);padding:10px 0}#evd{max-width:520px}
+#logo{height:44px;width:auto;margin-right:12px;border-radius:4px}
+.logoctl{display:none;margin-right:8px;padding:4px 10px;font-size:12px}body.editing .logoctl{display:inline-block}
+.btn.ghost{background:#2F6FA8;border-color:#2F6FA8;color:#fff}
+:root[data-theme="dark"] .btn.ghost{color:#fff}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.ghost{color:#fff}}
 .fcard h3{margin-top:0}.fcard .btn{margin-top:8px}
 #panel{display:none;position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:310px;max-height:72vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:6px;box-shadow:0 6px 24px rgba(10,20,35,.25);z-index:9;padding:12px 14px}
 body.editing #panel{display:block}
@@ -123,7 +128,9 @@ body.editing #panel{display:block}
 </head>
 <body>
 <header class="top"><div class="bar">
-<button class="brand" data-go="home">Guilderland High School Research Journal<small>GHSRJ · Peer-reviewed student research</small></button>
+<img id="logo" alt="GHSRJ logo" hidden>
+<div class="brand" data-go="home" role="link" tabindex="0"><span id="bt">Guilderland High School Research Journal</span><small id="bsub">GHSRJ · Peer-reviewed student research</small></div>
+<label class="btn ghost logoctl">Upload logo<input id="logoin" type="file" accept="image/*" hidden></label><button class="btn ghost logoctl" id="logorm">Remove logo</button>
 <nav aria-label="Main">
 <button data-go="home" aria-current="true">Journal</button><button data-go="read">Read</button><button data-go="submit">Submit</button><button data-go="editor">Editors</button><button data-go="more">Board &amp; events</button>
 <button data-go="guide">Guidelines</button><button data-go="contact">Contact</button></nav><button class="btn" id="editBtn" aria-pressed="false" style="background:#fff;color:#14335C;border-color:#fff">Edit page</button></div></header>
@@ -297,7 +304,7 @@ if(matchMedia('(max-width:820px)').matches||!fs.length){a.style.height='';fs.for
 const bd=w.querySelector('[data-body]'),bl=[...bd.children],t0=a.getBoundingClientRect().top;let y=0;
 fs.map((f,j)=>[f,j,papers[curP].fig[j].at|0]).sort((m,n)=>m[2]-n[2]||m[1]-n[1]).forEach(([f,j,at])=>{const el=bl[Math.min(at,bl.length-1)]||bd;const top=Math.max(el.getBoundingClientRect().top-t0,y);f.style.cssText='position:absolute;left:0;right:0;top:'+top+'px';y=top+f.offsetHeight+16});a.style.height=y+'px'}
 addEventListener('resize',()=>layFigs());addEventListener('load',()=>layFigs());
-let API='';const okApi=u=>/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u);
+let API='',LOGO='';const okApi=u=>/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u);
 const links=[];
 const lkNorm=u=>{u=String(u).trim();if(!u)return'';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const x=new URL(u);return/^https?:$/.test(x.protocol)?x.href:''}catch(e){return''}};
 const lkLabel=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return'Link'}};
@@ -308,6 +315,12 @@ const rbank=[{n:'Literature databases',l:[]},{n:'Writing & formatting',l:[]},{n:
 function ensureRb(){if($('#resbank'))return;const hd=[...$$('#more h2')].find(x=>/resource bank/i.test(x.textContent));if(!hd)return;const n=hd.nextElementSibling,d=document.createElement('div');d.id='resbank';if(n&&n.classList.contains('three'))n.replaceWith(d);else hd.after(d)}
 function rRb(){const e=$('#resbank');if(!e)return;e.setAttribute('contenteditable','false');
 e.innerHTML='<div class="rbgrid">'+rbank.map((c,i)=>`<div class="rbcat"><h3${editing?` contenteditable="true" data-rbn="${i}"`:''}>${esc(c.n)}</h3>${editing?`<div class="acts"><input data-rbin="${i}" placeholder="Paste a link" style="flex:1;min-width:0"><button class="btn" data-act="addrb" data-v="${i}">Add</button></div><div class="rbl">${c.l.map((l,j)=>`<div class="rbrow" data-i="${i}" data-j="${j}"><button class="rm" aria-label="Remove link">×</button><span class="btn" contenteditable="true" data-rbl="${i}|${j}">${esc(l.t)}</span><div class="meta" contenteditable="true" data-rbu="${i}|${j}" style="word-break:break-all;max-width:220px">${esc(l.u)}</div></div>`).join('')}</div>`:c.l.length?`<div class="rbl">${c.l.map(l=>`<a class="btn" href="${esc(lkNorm(l.u)||'#')}" target="_blank" rel="noopener noreferrer">${esc(l.t)}</a>`).join('')}</div>`:'<p class="meta">No links yet.</p>'}</div>`).join('')+'</div>'}
+function rLogo(){const i=$('#logo');if(LOGO){i.src=LOGO;i.hidden=false}else{i.removeAttribute('src');i.hidden=true}}
+$('#logoin').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f),im=new Image();
+im.onload=()=>{const r=Math.min(1,160/im.height,480/im.width),c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d').drawImage(im,0,0,c.width,c.height);LOGO=c.toDataURL('image/png');S.logo=LOGO;URL.revokeObjectURL(u);rLogo();save();e.target.value=''};
+im.onerror=()=>{URL.revokeObjectURL(u);alert('That file could not be read as an image.')};im.src=u});
+$('#logorm').onclick=()=>{LOGO='';S.logo='';rLogo();save()};
+document.addEventListener('keydown',e=>{if(!editing&&e.key==='Enter'&&e.target.classList&&e.target.classList.contains('brand'))nav('home')});
 const evs=[],anns=[];const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 let calY=new Date().getFullYear(),calM=new Date().getMonth();
 const p2=n=>String(n).padStart(2,'0'),fmtD=d=>new Date(d+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -407,6 +420,7 @@ const SEL='h1,h2,h3,p,li,figcaption,.meta,.issue span,.issue b,.abs,.tag,.eq,.st
 const els=[...document.querySelectorAll('main :is('+SEL+'), footer')].filter(e=>!e.closest('#more,#list,#kan,#guide,#contact')&&!e.id);
 const EXTRA='#guide h1,#guide h2,#guide p,#guide li,#contact h1,#contact p:not([id]),#contact label,header .brand,.toc a,main .btn:not([id]),#arch,#cite,#sbtn,#lh,h2[id^="s-"]';
 [...document.querySelectorAll(EXTRA)].forEach(e=>{if(!els.includes(e)&&!e.closest('#more,#list,#kan'))els.push(e)});
+const bi=els.indexOf($('header .brand'));if(bi>=0)els[bi]=$('#bt');els.push($('#bsub'));
 let LHT=$('#lh').textContent;
 const OT=[];document.querySelectorAll('main [placeholder]').forEach(e=>OT.push([e,'p']));document.querySelectorAll('main svg text').forEach(e=>OT.push([e,'t']));
 const otGet=([e,k])=>k==='p'?e.placeholder:e.textContent,otSet=([e,k],v)=>{k==='p'?e.placeholder=v:e.textContent=v};
@@ -439,6 +453,7 @@ if(Array.isArray(S.papers))papers.splice(0,papers.length,...S.papers.map(norm));
 if(Array.isArray(S.links))links.splice(0,links.length,...S.links.map(x=>({u:String(x.u),t:String(x.t)})));
 if(Array.isArray(S.rb))S.rb.slice(0,4).forEach((c,i)=>{rbank[i]={n:String(c.n),l:Array.isArray(c.l)?c.l.map(x=>({u:String(x.u),t:String(x.t)})):[]}});
 if(typeof S.api==='string'&&okApi(S.api))API=S.api;
+if(typeof S.logo==='string'&&/^(data:image\/png;base64,[A-Za-z0-9+\/=]+|images\/[\w.-]+)$/.test(S.logo))LOGO=S.logo;
 if(Array.isArray(S.evs))evs.splice(0,evs.length,...S.evs.map(x=>({id:String(x.id).replace(/[^\w-]/g,''),d:String(x.d),t:String(x.t||''),n:String(x.n||'Event'),desc:String(x.desc||'')})).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.d)));
 if(Array.isArray(S.anns))anns.splice(0,anns.length,...S.anns.map(x=>({id:String(x.id).replace(/[^\w-]/g,''),t:String(x.t||''),d:String(x.d||''),b:String(x.b||'')})));
 if(Array.isArray(S.fields))fields.splice(0,fields.length,...S.fields.map(f=>({id:String(f.id),n:String(f.n),d:String(f.d)})));
@@ -446,7 +461,7 @@ if(Array.isArray(S.cards))cards.splice(0,cards.length,...S.cards.map(c=>[String(
 Object.entries(S.t||{}).forEach(([i,h])=>{if(els[i])els[i].innerHTML=clean(String(h))});
 if(typeof S.more==='string')$('#more').innerHTML=clean(S.more);
 Object.entries(S.o).forEach(([i,v])=>{if(OT[i])otSet(OT[i],String(v))});LHT=$('#lh').textContent;
-ensureEv();ensureRb();ensureCal();rLinks();rRb();rCA();seed();buildViews();applyTheme();applyTabs();render();kan();
+ensureEv();ensureRb();ensureCal();rLinks();rRb();rCA();rLogo();seed();buildViews();applyTheme();applyTabs();render();kan();
 // panel
 $('#colsum').textContent='Colors ('+(DARK?'dark':'light')+' theme)';
 $('#cols').innerHTML=[['navy','Header & headings'],['sky','Accent'],['bg','Page background'],['ink','Text'],['tint','Highlight boxes']].map(([k,n])=>`<label>${n}<input type="color" data-c="${k}" value="${S.theme[PRE+k]||(DARK?DEFD:DEF)[k]}"></label>`).join('');
@@ -464,7 +479,7 @@ $('#editBtn').onclick=()=>setEdit(!editing);
 $('#pmin').onclick=()=>{const m=$('#panel').classList.toggle('min');$('#pmin').textContent=m?'Show':'Hide'};
 document.addEventListener('click',e=>{if(!editing)return;const t=e.target,rm=t.closest('.rm'),ac=t.closest('[data-act]');if(ac){e.preventDefault();e.stopImmediatePropagation();doAct(ac.dataset.act,ac.dataset.v);return}
 if(rm){e.preventDefault();e.stopImmediatePropagation();const p=rm.closest('.paper');if(p){papers.splice(+p.dataset.i,1);refresh()}else if(rm.closest('.ann')){anns.splice(+rm.closest('.ann').dataset.i,1);rCA()}else if(rm.closest('[data-sid],[data-mid]')){delRow(rm.closest('[data-sid],[data-mid]'));return}else if(rm.closest('.rbrow')){const r=rm.closest('.rbrow');rbank[+r.dataset.i].l.splice(+r.dataset.j,1);rRb()}else if(rm.closest('.lkrow')){links.splice(+rm.closest('.lkrow').dataset.i,1);rLinks()}else if(rm.closest('.pfig')){papers[curP].fig.splice(+rm.closest('.pfig').dataset.fi,1);rArt()}else if(rm.closest('.fcard')){delField(rm.closest('.fcard').dataset.fid);return}else rm.parentElement.remove();save();return}
-if(t.closest('main a,main .btn,main [data-go]')){e.preventDefault();e.stopImmediatePropagation()}},true);
+if(t.closest('main a,main .btn,main [data-go],header .brand')){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('input',e=>{const t=e.target;
 if(t.dataset.c){S.theme[PRE+t.dataset.c]=t.value;applyTheme();return save()}
 if(t.dataset.fk){S.theme[t.dataset.fk]=t.value;applyTheme();return save()}
@@ -513,6 +528,7 @@ const br=c.branch||'main',url='https://api.github.com/repos/'+c.repo+'/contents/
 const H={Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json'};
 try{
 const dir=(c.path||'index.html').replace(/[^/]*$/,'');
+if(S.logo&&S.logo.startsWith('data:')){st.textContent='Uploading logo…';const nm='images/logo-'+Date.now()+'.png',rl=await fetch('https://api.github.com/repos/'+c.repo+'/contents/'+dir+nm,{method:'PUT',headers:H,body:JSON.stringify({message:'Update logo',content:S.logo.split(',')[1],branch:br})});if(!rl.ok)throw new Error('Logo upload failed (error '+rl.status+').');S.logo=nm;save()}
 for(const q of papers)for(const f of (q.fig||[]))if(f.src.startsWith('data:')){st.textContent='Uploading image…';const ip=dir+'images/'+f.id+'.jpg',u='https://api.github.com/repos/'+c.repo+'/contents/'+ip;let sha;const ex=await fetch(u+'?ref='+encodeURIComponent(br),{headers:H});if(ex.ok)sha=(await ex.json()).sha;
 const ri=await fetch(u,{method:'PUT',headers:H,body:JSON.stringify({message:'Add figure image',content:f.src.split(',')[1],sha,branch:br})});if(!ri.ok)throw new Error('Image upload failed (error '+ri.status+').');f.src='images/'+f.id+'.jpg';save()}
 st.textContent='Publishing…';
