@@ -553,5 +553,15 @@ if(!r.ok)throw new Error('GitHub refused the update (error '+r.status+'). The to
 st.textContent='Published. Visitors will see it in a minute or two.';
 }catch(e){st.textContent=e.message}};
 </script>
+<script>
+(function(){
+  var c=document.getElementById('calann');
+  var h=[].slice.call(document.querySelectorAll('#more h2')).filter(function(x){return /symposium/i.test(x.textContent)})[0];
+  if(c&&h&&h.previousElementSibling!==c)h.before(c);
+  var old=window.show;
+  window.show=function(){old();var b=document.getElementById('back');b.style.visibility='';b.style.display=st?'':'none'};
+  window.show();
+})();
+</script>
 </body>
 </html>
