@@ -564,5 +564,29 @@ st.textContent='Published. Visitors will see it in a minute or two.';
   window.show();
 })();
 </script>
+<script>
+(function(){
+  if(location.hash.toLowerCase()!=='#timmy')return;
+  var W='Chicken Timmy Marsala',done=new WeakSet(),re=/[A-Za-z0-9]+(?:['\u2019][A-Za-z]+)*/g;
+  window.save=function(){};
+  var st=document.createElement('style');st.textContent='#editBtn,#panel{display:none!important}';document.head.appendChild(st);
+  function fix(root){
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+      var p=n.parentNode;
+      if(!p||done.has(n))return NodeFilter.FILTER_REJECT;
+      if(/^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/.test(p.nodeName))return NodeFilter.FILTER_REJECT;
+      return /[A-Za-z0-9]/.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+    }});
+    var list=[],n;
+    while((n=w.nextNode()))list.push(n);
+    list.forEach(function(t){t.nodeValue=t.nodeValue.replace(re,W);done.add(t)});
+    if(root.querySelectorAll)root.querySelectorAll('[placeholder]').forEach(function(e){if(!e._t){e.placeholder=e.placeholder.replace(re,W);e._t=1}});
+  }
+  fix(document.body);document.title=W;
+  new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(a){
+    if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentNode)fix(a.parentNode);
+  })})}).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
