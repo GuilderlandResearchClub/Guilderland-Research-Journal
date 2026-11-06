@@ -308,9 +308,9 @@ nav button{order:3}nav [data-go="home"]{order:0}nav [data-go="read"]{order:1}nav
 <details><summary>Fonts</summary><div id="fonts"></div></details>
 <details><summary>Tab names</summary><div id="tabs"></div></details>
 <details><summary>Placeholders &amp; chart labels</summary><div id="oth"></div></details>
-<details><summary>Add content</summary>
+<details open><summary>Add content</summary>
 <div class="meta">New paper</div><input id="apt" placeholder="Title"><input id="apa" placeholder="Author"><select id="apk"><option>STEM / Empirical</option><option>Humanities / Social Sciences</option><option>Interdisciplinary Review</option></select><button class="btn" id="apadd">Add paper</button>
-<div class="acts"><button class="btn ghost" id="am">Add board member</button><button class="btn ghost" id="ae">Add event</button><button class="btn ghost" id="asp">Add spotlight</button></div>
+<div class="acts"><button class="btn" id="am">+ Add board member</button><button class="btn ghost" id="ae">Add event</button><button class="btn ghost" id="asp">Add spotlight</button></div>
 <p class="meta">New board, resource and event items appear on the Board &amp; events tab, ready to type over. Use the red × to remove an item.</p></details>
 <details><summary>Backup &amp; reset</summary><div class="acts"><button class="btn ghost" id="xp">Export or import</button><button class="btn ghost" id="rst">Discard draft</button></div></details>
 </div></aside>
@@ -622,7 +622,7 @@ document.addEventListener('paste',e=>{if(!editing||!e.target.closest('[contented
 $('#apadd').onclick=()=>{const t=$('#apt').value.trim();if(!t){$('#apt').focus();return}
 papers.unshift(newP(t,$('#apa').value.trim(),$('#apk').value,fields[0]?fields[0].id:''));cards.push([t,0]);$('#apt').value='';$('#apa').value='';render($('#q').value);kan();save()};
 const addTo=(i,h)=>{$$('#more .three')[i].insertAdjacentHTML('beforeend',h);prep();save();go('more')};
-$('#am').onclick=()=>{const c=$$('#more .three')[0].children;let m=c[0];[...c].forEach(x=>{if(x.querySelectorAll('.person').length<m.querySelectorAll('.person').length)m=x});m.insertAdjacentHTML('beforeend','<div class="person"><div class="av">NN</div><div><b>New member</b><br>Role, grade</div></div>');prep();save();go('more')};
+$('#am').onclick=()=>{const nm=(prompt('Name of the new board member?')||'').trim();if(!nm)return;const rl=(prompt('Role and grade (for example: Managing Editor, Grade 12)')||'').trim();const ini=nm.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();const c=$$('#more .three')[0].children;let m=c[0];[...c].forEach(x=>{if(x.querySelectorAll('.person').length<m.querySelectorAll('.person').length)m=x});m.insertAdjacentHTML('beforeend','<div class="person"><div class="av">'+esc(ini)+'</div><div><b>'+esc(nm)+'</b><br>'+esc(rl)+'</div></div>');prep();save();go('more')};
 $('#ae').onclick=()=>addTo(1,'<div class="box" style="background:var(--tint);padding:14px"><b>New event</b><br>Describe the event here.</div>');
 $('#xp').onclick=()=>{collect();$('#xt').value=JSON.stringify(S);$('#xd').showModal()};
 $('#xx').onclick=()=>$('#xd').close();
